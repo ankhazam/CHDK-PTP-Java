@@ -4,11 +4,14 @@ apply plugin: 'eclipse'
 apply plugin: 'eclipse-wtp'
 apply plugin: 'project-report'
 apply plugin: 'semver'
-apply plugin: 'com.jfrog.artifactory-upload'
+apply plugin: 'signing'
+//apply plugin: 'com.jfrog.artifactory-upload'
 
 sourceCompatibility = 1.7
-project.version.with { major = 0; minor = 5; revision = 1 }
-group = 'org.chdk.ptp.java'
+project.version.with { major = 0; minor = 6; revision = 0 }
+
+//project.USER = "something"
+//project.PASSWORD = "random"
 
 buildscript
 {
@@ -29,25 +32,32 @@ repositories
     maven() { url 'https://maven.man.poznan.pl/repository/kiwi-repo' } // virtual repo
 }
 
-artifactory
-{
-    contextUrl = 'https://maven.man.poznan.pl/repository'
-    publish
-    {
-        contextUrl = 'https://maven.man.poznan.pl/repository'
-        //A closure defining publishing information
-        repository {
-            repoKey = 'kiwi-libs-snapshots'
-            username = USER
-            password = PASSWORD
-        }
-    }
-    resolve {
-        contextUrl = 'https://maven.man.poznan.pl/repository' //The base Artifactory URL for the resolver
-        repository { repoKey = 'kiwi-repo'  //The Artifactory (preferably virtual) repository key to resolve from
-        }
-    }
+//artifactory
+//{
+//    contextUrl = 'https://maven.man.poznan.pl/repository'
+//    publish
+//    {
+//        contextUrl = 'https://maven.man.poznan.pl/repository'
+//        //A closure defining publishing information
+//        repository {
+//            repoKey = 'kiwi-libs-snapshots'
+//     //       username = USER
+//     //       password = PASSWORD
+//        }
+//    }
+//    resolve {
+//        contextUrl = 'https://maven.man.poznan.pl/repository' //The base Artifactory URL for the resolver
+//        repository { repoKey = 'kiwi-repo'  //The Artifactory (preferably virtual) repository key to resolve from
+//        }
+//    }
+//}
+
+
+task javadocJar(type: Jar) {
+	classifier = 'javadoc'
+	from javadoc
 }
+
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier 'sources'
@@ -62,7 +72,8 @@ task testsJar(type: Jar, dependsOn: classes) {
 
 artifacts {
     archives sourcesJar
-    archives testsJar
+    archives javadocJar
+	archives jar
 }
 
 dependencies
@@ -72,3 +83,57 @@ dependencies
 
     testCompile 'junit:junit:4.11+'
 }
+
+group = "com.neuronrobotics"
+archivesBaseName = "CHDK-PTP-Java"
+
+signing {
+	sign configurations.archives
+}
+
+uploadArchives {
+	repositories {
+	  mavenDeployer {
+		beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+  
+		repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+		  authentication(userName: ossrhUsername, password: ossrhPassword)
+		}
+  
+		snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+		  authentication(userName: ossrhUsername, password: ossrhPassword)
+		}
+  
+		pom.project {
+		  name 'CHDK Camera interface for Java'
+		  packaging 'jar'
+		  // optionally artifactId can be defined here
+		  description 'A Java based interface for sending and receiving comands to CHDK cameras'
+		  url 'http://neuronrobotics.com'
+  
+		  scm {
+			connection 			'scm:git:https://github.com/acamilo/CHDK-PTP-Java'
+			developerConnection 'scm:git:git@github.com:acamilo/CHDK-PTP-Java.git'
+			url 'https://github.com/acamilo/CHDK-PTP-Java'
+		  }
+  
+		  licenses {
+			license {
+			  name 'The Apache License, Version 2.0'
+			  url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+			}
+		  }
+  
+		  developers {
+			developer {
+			  id 'madhephaestus'
+			  name 'Kevin Harrington'
+			  email 'kharrington@neuronrobotics.com'
+			}
+		  }
+		}
+	  }
+	}
+  }
+
+
